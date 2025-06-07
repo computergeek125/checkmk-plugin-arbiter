@@ -63,7 +63,38 @@
                 "${input:envHOST}"
             ],
             "console": "integratedTerminal",
-        }
+        },
+        {
+            "name": "agent_redfish",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/workspaces/checkmk_template_23/plugins/redfish/special_agents/agent_redfish.py",
+            "args": [
+                "-vvv",
+                "--debug",
+                "-P",
+                "http",
+                "-u",
+                "admin",
+                "--password-id",
+                "rfpass:/omd/sites/cmk/var/check_mk/passwords_merged",
+                "-p",
+                "8000",
+                "192.168.188.223",
+            ]
+        },
+        {
+            "name": "cmk - show host config",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "~/bin/cmk",
+            "args": [
+                "--debug",
+                "-vv",
+                "-D",
+                "${input:envHOST}"
+            ]
+        },
     ],
     "inputs": [
         {

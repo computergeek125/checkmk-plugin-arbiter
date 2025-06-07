@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 
 import datetime
+from enum import IntEnum
 import time
-from typing import Union
+from typing import NamedTuple, Union
 from cmk.agent_based.v2 import (  # type: ignore
     CheckPlugin,
     CheckResult,
     check_levels,
-    exists,
     DiscoveryResult,
+    exists,
+    LevelsT,
     Result,
     Service,
     SimpleSNMPSection,
@@ -17,17 +19,132 @@ from cmk.agent_based.v2 import (  # type: ignore
     # StringTable,
 )
 
-_METRIC_SANITY_LEVELS = {
-    "ntpSysOffset": (0, 1),
-    "ntpSysFreq": (0, 1),
-    "ntpSysSysJitter": (0, 100),
-    "ntpSysClkJitter": (0, 100),
-    "ntpSysClkWander": (0, 100),
-    "ntpSysRootDelay": (0, 100),
-    "ntpSysRootDispersion": (0, 10000),
-    "ntpSysStratum": (0, 2),
-    "ntpSysPrecision": (0, 1),
-}
+
+ArbiterMetricInfo = NamedTuple(
+    "ArbiterMetricInfo",
+    (
+        ("levels_low", tuple[str, tuple[float, float]] | None),
+        ("levels_high", tuple[str, tuple[float, float]] | None),
+        ("units", str | None),
+        ("scaler", float | None),
+        ("twopow", bool),
+    ),
+)
+
+
+class ArbiterServiceType(IntEnum):
+    String = 0
+    Number = 1
+
+
+ArbiterServiceMap = NamedTuple(
+    "ArbiterServiceMap",
+    (
+        ("id", str),
+        ("type", ArbiterServiceType),
+        ("metric", ArbiterMetricInfo | None),
+    ),
+)
+
+
+class ArbiterServiceKNMap:
+    def __init__(self, init: dict[str, ArbiterServiceMap] = {}) -> None:
+        self._dict_n1: dict[str, ArbiterServiceMap] = init
+        self._map_n2: dict[str, str] = {}
+        if init:
+            for k, v in init.items():
+                self._map_n2[v.id] = k
+
+    def n1_to_n2(self, name1: str) -> str:
+        return self._dict_n1[name1].id
+
+    def n2_to_n1(self, name2: str) -> str:
+        return self._map_n2[name2]
+
+    def retrieve_n1(self, name1: str) -> ArbiterServiceMap:
+        return self._dict_n1[name1]
+
+    def retrieve_n2(self, name2: str) -> ArbiterServiceMap:
+        return self._dict_n1[self._map_n2[name2]]
+
+    def put(self, name1: str, name2: str, value: ArbiterServiceMap):
+        self._dict_n1[name1] = value
+        self._map_n2[name2] = name1
+
+
+SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
+    {
+        "NTP System String": ArbiterServiceMap(
+            "ntpSysString", ArbiterServiceType.String, None
+        ),
+        "NTP System Clock": ArbiterServiceMap(
+            "ntpSysClock", ArbiterServiceType.String, None
+        ),
+        "NTP System Clock - datetime": ArbiterServiceMap(
+            "ntpSysClockDateTime", ArbiterServiceType.String, None
+        ),
+        "NTP Leap Second Info": ArbiterServiceMap(
+            "ntpSysLeap", ArbiterServiceType.String, None
+        ),
+        "NTP Reference Time": ArbiterServiceMap(
+            "ntpSysRefTime", ArbiterServiceType.String, None
+        ),
+        "NTP System Offset": ArbiterServiceMap(
+            "ntpSysOffset",
+            ArbiterServiceType.Number,
+            ArbiterMetricInfo(None, ("fixed", (0.5, 1.0)), None, None, False),
+        ),
+        "NTP System Frequency": ArbiterServiceMap(
+            "ntpSysFreq",
+            ArbiterServiceType.Number,
+            ArbiterMetricInfo(None, ("fixed", (1, 2)), "PPM", None, False),
+        ),
+        "NTP System Jitter": ArbiterServiceMap(
+            "ntpSysSysJitter",
+            ArbiterServiceType.Number,
+            ArbiterMetricInfo(
+                ("fixed", (-100, -50)), ("fixed", (50, 100)), None, None, False
+            ),
+        ),
+        "NTP Clock Jitter": ArbiterServiceMap(
+            "ntpSysClkJitter",
+            ArbiterServiceType.Number,
+            ArbiterMetricInfo(
+                ("fixed", (-100, -50)), ("fixed", (50, 100)), None, None, False
+            ),
+        ),
+        "NTP Clock Wander": ArbiterServiceMap(
+            "ntpSysClkWander",
+            ArbiterServiceType.Number,
+            ArbiterMetricInfo(
+                ("fixed", (-100, -50)), ("fixed", (50, 100)), None, None, False
+            ),
+        ),
+        "NTP Root Delay": ArbiterServiceMap(
+            "ntpSysRootDelay",
+            ArbiterServiceType.Number,
+            ArbiterMetricInfo(
+                ("fixed", (-100, -50)), ("fixed", (50, 100)), None, None, False
+            ),
+        ),
+        "NTP Root Dispersion": ArbiterServiceMap(
+            "ntpSysRootDispersion",
+            ArbiterServiceType.Number,
+            ArbiterMetricInfo(None, ("fixed", (5000, 10000)), "ms", 0.001, False),
+        ),
+        "NTP Stratum": ArbiterServiceMap(
+            "ntpSysStratum",
+            ArbiterServiceType.Number,
+            ArbiterMetricInfo(None, ("fixed", (2, 3)), None, None, False),
+        ),
+        "NTP System Precision": ArbiterServiceMap(
+            "ntpSysPrecision",
+            ArbiterServiceType.Number,
+            ArbiterMetricInfo(None, ("fixed", (500, 1000)), "us", 0.000001, True),
+        ),
+    }
+)
+
 
 # fractional time algorithm from https://github.com/cf-natali/ntplib/blob/master/ntplib.py
 # retrieved 2025-06-07
@@ -95,61 +212,51 @@ def parse_arbiter_gnss(
     clock_item["ntpSysStratum"] = int(string_table[11][0])
     clock_item["ntpSysPrecision"] = int(string_table[12][0])
     clock_item["ntpSysRefTime"] = parse_arbiter_ntp_hex_time(string_table[13][0])
+    keys = list(clock_item.keys())
+    for key in keys:
+        value = clock_item.pop(key)
+        clock_item[SERVICE_MAP.n2_to_n1(key)] = value
+
     return clock_item
 
 
 def discover_arbiter_gnss(
     section: dict[str, Union[str, int, float, datetime.datetime]],
 ) -> DiscoveryResult:
-    for field in section:
-        yield Service(item=field)
+    for item in section:
+        print("DISC", item)
+        yield Service(item=item)
 
 
 def check_arbiter_gnss(
     item: str, section: dict[str, Union[str, int, float, datetime.datetime]]
 ) -> CheckResult:
-    print("CHK", item, section.get(item))
-    if item in (
-        "ntpSysString",
-        "ntpSysClockDateTime",
-        "ntpSysLeap",
-        "ntpSysClock",
-        "ntpSysRefTime",
-    ):
-
-        field_val = section.get(item)
-        print("Result ->", field_val)
-        yield Result(state=State.OK, summary=str(field_val))
-    elif item == "ntpSysPrecision":
-        ntpSysPrecision = section.get(item)
-        assert isinstance(ntpSysPrecision, int)
-        ntpSysPrecision_us = (2**ntpSysPrecision) * 1000000
-        print("Metric ->", ntpSysPrecision_us)
-        yield from check_levels(
-            metric_name=item,
-            value=ntpSysPrecision_us,
-            boundaries=_METRIC_SANITY_LEVELS[item],
-        )
-    elif item in (
-        "ntpSysOffset",
-        "ntpSysFreq",
-        "ntpSysSysJitter",
-        "ntpSysClkJitter",
-        "ntpSysClkWander",
-        "ntpSysRootDelay",
-        "ntpSysRootDispersion",
-        "ntpSysStratum",
-    ):
-        clk_stat_value = section.get(item)
-        assert isinstance(clk_stat_value, (int, float))
-        print("Metric ->", clk_stat_value)
-        yield from check_levels(
-            metric_name=item,
-            value=clk_stat_value,
-            boundaries=_METRIC_SANITY_LEVELS[item],
-        )
-    else:
-        raise ValueError(f"Encountered item {item} not present in section {section}")
+    service_map: ArbiterServiceMap = SERVICE_MAP.retrieve_n1(item)
+    match service_map.type:
+        case ArbiterServiceType.String:
+            service_value = section.get(item)
+            yield Result(state=State.OK, summary=str(service_value))
+        case ArbiterServiceType.Number:
+            metric_info = service_map.metric
+            assert isinstance(metric_info, ArbiterMetricInfo)
+            metric_value_raw = section.get(item)
+            assert isinstance(metric_value_raw, int | float)
+            metric_value_scaled = metric_value_raw
+            if metric_info.twopow:
+                metric_value_scaled = 2**metric_value_scaled
+            if metric_info.scaler:
+                metric_value_scaled = metric_value_scaled * metric_info.scaler
+            yield from check_levels(
+                metric_name=service_map.id,
+                label=item,
+                value=metric_value_scaled,
+                levels_lower=metric_info.levels_low,
+                levels_upper=metric_info.levels_high,
+            )
+        case _:
+            raise ValueError(
+                f"Encountered item {item} not present in section {section}"
+            )
 
 
 snmp_section_arbiter_gnss = SimpleSNMPSection(

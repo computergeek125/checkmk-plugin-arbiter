@@ -17,10 +17,10 @@
             "request": "launch",
             "program": "~/bin/cmk",
             "args": [
-            "-vv",
-            "--debug",
-            "-n",
-            "${input:envHOST}"
+                "-vv",
+                "--debug",
+                "-n",
+                "${input:envHOST}"
             ],
             "console": "integratedTerminal",
         },
@@ -30,10 +30,10 @@
             "request": "launch",
             "program": "~/bin/cmk",
             "args": [
-            "-vv",
-            "--debug",
-            "-I",
-            "${input:envHOST}"
+                "-vv",
+                "--debug",
+                "-I",
+                "${input:envHOST}"
             ],
             "console": "integratedTerminal",
         },
@@ -43,10 +43,10 @@
             "request": "launch",
             "program": "~/bin/cmk",
             "args": [
-            "-vv",
-            "--debug",
-            "-II",
-            "${input:envHOST}"
+                "-vv",
+                "--debug",
+                "-II",
+                "${input:envHOST}"
             ],
             "console": "integratedTerminal",
         },
@@ -56,24 +56,24 @@
             "request": "launch",
             "program": "~/bin/cmk",
             "args": [
-            "-vv",
-            "--debug",
-            "-A",
-            "-f",
-            "${input:envHOST}"
+                "-vv",
+                "--debug",
+                "-A",
+                "-f",
+                "${input:envHOST}"
             ],
             "console": "integratedTerminal",
         }
     ],
     "inputs": [
         {
-          "id": "envHOST",
-          "type": "command",
-          "command": "extension.commandvariable.file.content",
-          "args": {
-            "fileName": "${workspaceFolder}/.env",
-            "key": "CHECKHOST"
-          }
+            "id": "envHOST",
+            "type": "command",
+            "command": "extension.commandvariable.file.content",
+            "args": {
+                "fileName": "${workspaceFolder}/.env",
+                "key": "CHECKHOST"
+            }
         }
     ]
 }

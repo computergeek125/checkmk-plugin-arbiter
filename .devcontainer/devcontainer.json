@@ -5,8 +5,8 @@
     "build": {
         "dockerfile": "Dockerfile",
         "args": {
-            "VARIANT": "2.4.0p3",
-            "EDITION": "cloud"
+            "VARIANT": "2.4.0-daily",
+            "EDITION": "raw"
         }
     },
     "customizations": {

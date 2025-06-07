@@ -2,15 +2,16 @@
 
 import datetime
 from enum import IntEnum
+import functools
 import time
-from typing import NamedTuple, Union
+from typing import Callable, NamedTuple, Union
 from cmk.agent_based.v2 import (  # type: ignore
     CheckPlugin,
     CheckResult,
     check_levels,
     DiscoveryResult,
     exists,
-    LevelsT,
+    render,
     Result,
     Service,
     SimpleSNMPSection,
@@ -20,12 +21,16 @@ from cmk.agent_based.v2 import (  # type: ignore
 )
 
 
+def _render_unit(value: float, unit: str) -> str:
+    return f"{value} {unit}"
+
+
 ArbiterMetricInfo = NamedTuple(
     "ArbiterMetricInfo",
     (
         ("levels_low", tuple[str, tuple[float, float]] | None),
         ("levels_high", tuple[str, tuple[float, float]] | None),
-        ("units", str | None),
+        ("render", Callable[[float], str] | None),
         ("scaler", float | None),
         ("twopow", bool),
     ),
@@ -92,45 +97,71 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
         "NTP System Offset": ArbiterServiceMap(
             "ntpSysOffset",
             ArbiterServiceType.Number,
-            ArbiterMetricInfo(None, ("fixed", (0.5, 1.0)), None, None, False),
+            ArbiterMetricInfo(
+                None, ("fixed", (0.5, 1.0)), render.time_offset, None, False
+            ),
         ),
         "NTP System Frequency": ArbiterServiceMap(
             "ntpSysFreq",
             ArbiterServiceType.Number,
-            ArbiterMetricInfo(None, ("fixed", (1, 2)), "PPM", None, False),
+            ArbiterMetricInfo(
+                None,
+                ("fixed", (1, 2)),
+                functools.partial(_render_unit, unit="PPM"),
+                None,
+                False,
+            ),
         ),
         "NTP System Jitter": ArbiterServiceMap(
             "ntpSysSysJitter",
             ArbiterServiceType.Number,
             ArbiterMetricInfo(
-                ("fixed", (-100, -50)), ("fixed", (50, 100)), None, None, False
+                ("fixed", (-100, -50)),
+                ("fixed", (50, 100)),
+                render.time_offset,
+                None,
+                False,
             ),
         ),
         "NTP Clock Jitter": ArbiterServiceMap(
             "ntpSysClkJitter",
             ArbiterServiceType.Number,
             ArbiterMetricInfo(
-                ("fixed", (-100, -50)), ("fixed", (50, 100)), None, None, False
+                ("fixed", (-100, -50)),
+                ("fixed", (50, 100)),
+                render.time_offset,
+                None,
+                False,
             ),
         ),
         "NTP Clock Wander": ArbiterServiceMap(
             "ntpSysClkWander",
             ArbiterServiceType.Number,
             ArbiterMetricInfo(
-                ("fixed", (-100, -50)), ("fixed", (50, 100)), None, None, False
+                ("fixed", (-100, -50)),
+                ("fixed", (50, 100)),
+                render.time_offset,
+                None,
+                False,
             ),
         ),
         "NTP Root Delay": ArbiterServiceMap(
             "ntpSysRootDelay",
             ArbiterServiceType.Number,
             ArbiterMetricInfo(
-                ("fixed", (-100, -50)), ("fixed", (50, 100)), None, None, False
+                ("fixed", (-100, -50)),
+                ("fixed", (50, 100)),
+                render.time_offset,
+                None,
+                False,
             ),
         ),
         "NTP Root Dispersion": ArbiterServiceMap(
             "ntpSysRootDispersion",
             ArbiterServiceType.Number,
-            ArbiterMetricInfo(None, ("fixed", (5000, 10000)), "ms", 0.001, False),
+            ArbiterMetricInfo(
+                None, ("fixed", (5000, 10000)), render.time_offset, None, False
+            ),
         ),
         "NTP Stratum": ArbiterServiceMap(
             "ntpSysStratum",
@@ -140,7 +171,9 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
         "NTP System Precision": ArbiterServiceMap(
             "ntpSysPrecision",
             ArbiterServiceType.Number,
-            ArbiterMetricInfo(None, ("fixed", (500, 1000)), "us", 0.000001, True),
+            ArbiterMetricInfo(
+                None, ("fixed", (500, 1000)), render.time_offset, None, True
+            ),
         ),
     }
 )
@@ -246,10 +279,12 @@ def check_arbiter_gnss(
                 metric_value_scaled = 2**metric_value_scaled
             if metric_info.scaler:
                 metric_value_scaled = metric_value_scaled * metric_info.scaler
+
             yield from check_levels(
                 metric_name=service_map.id,
                 label=item,
                 value=metric_value_scaled,
+                render_func=metric_info.render,
                 levels_lower=metric_info.levels_low,
                 levels_upper=metric_info.levels_high,
             )

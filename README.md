@@ -1,8 +1,25 @@
-# Checkmk extension devcontainer template
+# Checkmk plugin for Arbiter GNSS clocks
 
 ## Description
 
-This is a template to develop Checkmk Extensions derived from the original made by [Marius Rieder](https://github.com/jiuka/)
+This Checkmk extension decodes the SNMP response of Arbiter GNSS clocks.
+
+## Setup
+- Install the Checkmk *.mkp as normal
+- Add the GPS clock as a host, ensure the following settings
+    - (required) Set SNMP to v2, set SNMPv2 community string set to public
+    - (recommended) Set "Checkmk agent / API integrations" to "No API Integrations / No Checkmk Agent"
+- Run service discovery
+- Add services you wish to track
+
+## Tested clocks / notes
+- Arbiter 1088B
+    - May jump to previous GPS epochs on cold startups.  Resolve by manually setting the time via serial prior to GPS antenna attach
+
+## Edits compared to the container
+ - `.devcontainer` -> `devcontainer.json`,`Dockerfile` modified to use Checkmk Cloud 2.4.0p3 (see: [this forum post](https://forum.checkmk.com/t/best-ide-configuration-practices-for-checkmk-plug-in-development/50135/12))
+
+# Notes from the repo template
 
 ## Development
 

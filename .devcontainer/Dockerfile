@@ -1,5 +1,5 @@
-ARG VARIANT
-FROM checkmk/check-mk-free:${VARIANT}
+ARG EDITION VARIANT
+FROM checkmk/check-mk-${EDITION}:${VARIANT}
 
 RUN /docker-entrypoint.sh /bin/true
 

@@ -6,7 +6,7 @@ RUN /docker-entrypoint.sh /bin/true
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends nodejs gcc
 
-ADD https://www.arbiter.com/files/software/ntp_ptp/ARBITER-ALL-MIB.mib /omd/sites/cmk/local/share/snmp/mibs/
+#RUN 'curl https://www.arbiter.com/files/software/ntp_ptp/ARBITER-ALL-MIB.mib -o /omd/sites/cmk/local/share/snmp/mibs/ARBITER-ALL-MIB.mib'
 ADD requirements.txt /tmp/requirements.txt
 USER cmk
 RUN PATH="/omd/sites/cmk/bin:${PATH}" \

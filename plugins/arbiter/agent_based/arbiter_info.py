@@ -11,6 +11,7 @@ from cmk.agent_based.v2 import (  # type: ignore
     check_levels,
     DiscoveryResult,
     exists,
+    Metric,
     render,
     Result,
     Service,
@@ -41,6 +42,7 @@ class ArbiterServiceType(IntEnum):
     String = 0
     Number = 1
     Date = 2
+    Leap = 3
 
 
 ArbiterServiceMap = NamedTuple(
@@ -90,7 +92,7 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
             "ntpSysClockDateTime", ArbiterServiceType.String, None
         ),
         "NTP Leap Second Info": ArbiterServiceMap(
-            "ntpSysLeap", ArbiterServiceType.String, None
+            "ntpSysLeap", ArbiterServiceType.Leap, None
         ),
         "NTP Reference Time": ArbiterServiceMap(
             "ntpSysRefTime", ArbiterServiceType.Date, None
@@ -206,7 +208,7 @@ def parse_arbiter_ntp_hex_time(string_hex: str) -> datetime.datetime:
     whole = int(fract_split[0], 16)
     fract = int(fract_split[1], 16)
     return datetime.datetime.fromtimestamp(
-        ntp_fract_composite(whole, fract, 16) - _NTP_DELTA
+        ntp_fract_composite(whole, fract) - _NTP_DELTA
     )
 
 
@@ -241,7 +243,7 @@ def parse_arbiter_gnss(
     clock_item["ntpSysClkWander"] = int(string_table[7][0])
     clock_item["ntpSysRootDelay"] = int(string_table[8][0])
     clock_item["ntpSysRootDispersion"] = int(string_table[9][0])
-    clock_item["ntpSysLeap"] = string_table[10][0]
+    clock_item["ntpSysLeap"] = int(string_table[10][0])
     clock_item["ntpSysStratum"] = int(string_table[11][0])
     clock_item["ntpSysPrecision"] = int(string_table[12][0])
     clock_item["ntpSysRefTime"] = parse_arbiter_ntp_hex_time(string_table[13][0])
@@ -295,6 +297,35 @@ def check_arbiter_gnss(
                 value=date_value.timestamp(),
                 render_func=render.datetime,
             )
+        case ArbiterServiceType.Leap:
+            leap_value = section.get(item)
+            assert isinstance(leap_value, int)
+            leap_metric: int | None = None
+            match leap_value:
+                case 0b00:
+                    leap_state = State.OK
+                    leap_summary = "No leap second is expected"
+                    leap_metric = 0
+                case 0b01:
+                    leap_state = State.WARN
+                    leap_summary = "Forward leap second is expected"
+                    leap_metric = 1
+                case 0b10:
+                    leap_state = State.WARN
+                    leap_summary = "Reverse leap second is expected"
+                    leap_metric = -1
+                case 0b01:
+                    leap_state = State.CRIT
+                    leap_summary = "Clock is unsynchronized"
+                case _:
+                    leap_state = State.UNKNOWN
+                    leap_summary = "Unknown leap second bitmap returned"
+            yield Result(
+                state=leap_state,
+                summary=f"{leap_summary} (0b{leap_value:02b})",
+            )
+            if leap_metric is not None:
+                yield Metric(name="leap_info", value=leap_metric)
         case _:
             raise ValueError(
                 f"Encountered item {item} not present in section {section}"

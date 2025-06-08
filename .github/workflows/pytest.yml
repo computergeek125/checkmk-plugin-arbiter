@@ -21,7 +21,9 @@ jobs:
       run: /docker-entrypoint.sh /bin/true
     - uses: actions/checkout@v4
     - name: Setup links
-      run: ./.devcontainer/setpwd.sh
+      run: .devcontainer/symlink_github.sh
+    - name: Setup password
+      run: .devcontainer/setpwd.sh
     - name: Install pytest
       run: su -l -c "REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt pip3 install -r $GITHUB_WORKSPACE/.devcontainer/requirements.txt" cmk
     - name: Update GITHUB_PATH

@@ -229,7 +229,6 @@ def parse_arbiter_gnss(
     .1.3.6.1.4.1.39849.3.1.14.0 eb4ada72.747d467f --> ARBITER-ALL-MIB::ntpSysRefTime.0
     """
     "[['NTP Time Server'], ['eb4ae858.b35c7442'], ['Feb  3 2025  1:01:44.700, peer=64326'], ['0'], ['0'], ['0'], ['15'], ['0'], ['0'], ['11511'], ['0'], ['1'], ['-16'], ['eb4ae832.747cb4a1']]"
-    # print(string_table)
     clock_item: dict[str, Union[str, int, float, datetime.datetime]] = {}
     clock_item["ntpSysString"] = string_table[0][0]
     clock_item["ntpSysClock"] = parse_arbiter_ntp_hex_time(string_table[1][0])
@@ -257,7 +256,6 @@ def discover_arbiter_gnss(
     section: dict[str, Union[str, int, float, datetime.datetime]],
 ) -> DiscoveryResult:
     for item in section:
-        print("DISC", item)
         yield Service(item=item)
 
 
@@ -285,8 +283,8 @@ def check_arbiter_gnss(
                 label=item,
                 value=metric_value_scaled,
                 render_func=metric_info.render,
-                levels_lower=metric_info.levels_low,
-                levels_upper=metric_info.levels_high,
+                levels_lower=metric_info.levels_low,  # type: ignore
+                levels_upper=metric_info.levels_high,  # type: ignore
             )
         case _:
             raise ValueError(

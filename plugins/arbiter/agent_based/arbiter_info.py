@@ -314,7 +314,7 @@ def check_arbiter_gnss(
                     leap_state = State.WARN
                     leap_summary = "Reverse leap second is expected"
                     leap_metric = -1
-                case 0b01:
+                case 0b11:
                     leap_state = State.CRIT
                     leap_summary = "Clock is unsynchronized"
                 case _:

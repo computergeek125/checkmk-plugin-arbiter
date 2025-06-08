@@ -1,21 +1,10 @@
-{
-    'author': u'',
-    'description': u'',
-    'download_url': '',
-    'files': {
-        'agent_based': [],
-        'agents': [],
-        'checkman': [],
-        'checks': [],
-        'doc': [],
-        'inventory': [],
-        'notifications': [],
-        'pnp-templates': [],
-        'web': []
-    },
-    'name': '',
-    'title': u'',
-    'version': '0.1',
-    'version.min_required': '2.0.0',
-    'version.packaged': '2.0.0'
-}
+{'author': 'computergeek125',
+ 'description': 'SNMP plugin for monitoring Arbiter GNSS clocks',
+ 'download_url': 'https://github.com/computergeek125/checkmk-plugin-arbiter/releases',
+ 'files': {'cmk_addons_plugins': ['arbiter/agent_based/arbiter_info.py']},
+ 'name': 'arbiter',
+ 'title': 'Arbiter GNSS',
+ 'version': '0.1.0',
+ 'version.min_required': '2.3.0',
+ 'version.packaged': 'cmk-mkp-tool 1.0.0',
+ 'version.usable_until': None}

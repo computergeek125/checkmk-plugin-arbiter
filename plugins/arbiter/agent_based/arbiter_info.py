@@ -50,6 +50,7 @@ ArbiterServiceMap = NamedTuple(
     (
         ("id", str),
         ("type", ArbiterServiceType),
+        ("discovery", bool),
         ("metric", ArbiterMetricInfo | None),
     ),
 )
@@ -83,23 +84,24 @@ class ArbiterServiceKNMap:
 SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
     {
         "NTP System String": ArbiterServiceMap(
-            "ntpSysString", ArbiterServiceType.String, None
+            "ntpSysString", ArbiterServiceType.String, True, None
         ),
         "NTP System Clock": ArbiterServiceMap(
-            "ntpSysClock", ArbiterServiceType.Date, None
+            "ntpSysClock", ArbiterServiceType.Date, True, None
         ),
-        "NTP System Clock - datetime": ArbiterServiceMap(
-            "ntpSysClockDateTime", ArbiterServiceType.String, None
+        "NTP System Clock - Text": ArbiterServiceMap(
+            "ntpSysClockDateTime", ArbiterServiceType.String, False, None
         ),
         "NTP Leap Second Info": ArbiterServiceMap(
-            "ntpSysLeap", ArbiterServiceType.Leap, None
+            "ntpSysLeap", ArbiterServiceType.Leap, True, None
         ),
         "NTP Reference Time": ArbiterServiceMap(
-            "ntpSysRefTime", ArbiterServiceType.Date, None
+            "ntpSysRefTime", ArbiterServiceType.Date, True, None
         ),
         "NTP System Offset": ArbiterServiceMap(
             "ntpSysOffset",
             ArbiterServiceType.Number,
+            True,
             ArbiterMetricInfo(
                 None, ("fixed", (0.5, 1.0)), render.time_offset, None, False
             ),
@@ -107,6 +109,7 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
         "NTP System Frequency": ArbiterServiceMap(
             "ntpSysFreq",
             ArbiterServiceType.Number,
+            True,
             ArbiterMetricInfo(
                 None,
                 ("fixed", (1, 2)),
@@ -118,6 +121,7 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
         "NTP System Jitter": ArbiterServiceMap(
             "ntpSysSysJitter",
             ArbiterServiceType.Number,
+            True,
             ArbiterMetricInfo(
                 ("fixed", (-100, -50)),
                 ("fixed", (50, 100)),
@@ -129,6 +133,7 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
         "NTP Clock Jitter": ArbiterServiceMap(
             "ntpSysClkJitter",
             ArbiterServiceType.Number,
+            True,
             ArbiterMetricInfo(
                 ("fixed", (-100, -50)),
                 ("fixed", (50, 100)),
@@ -140,6 +145,7 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
         "NTP Clock Wander": ArbiterServiceMap(
             "ntpSysClkWander",
             ArbiterServiceType.Number,
+            True,
             ArbiterMetricInfo(
                 ("fixed", (-100, -50)),
                 ("fixed", (50, 100)),
@@ -151,6 +157,7 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
         "NTP Root Delay": ArbiterServiceMap(
             "ntpSysRootDelay",
             ArbiterServiceType.Number,
+            True,
             ArbiterMetricInfo(
                 None,
                 ("fixed", (50, 100)),
@@ -162,6 +169,7 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
         "NTP Root Dispersion": ArbiterServiceMap(
             "ntpSysRootDispersion",
             ArbiterServiceType.Number,
+            True,
             ArbiterMetricInfo(
                 None, ("fixed", (0.025, 0.05)), render.time_offset, 0.000001, False
             ),
@@ -169,11 +177,13 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
         "NTP Stratum": ArbiterServiceMap(
             "ntpSysStratum",
             ArbiterServiceType.Number,
+            True,
             ArbiterMetricInfo(None, ("fixed", (2, 3)), None, None, False),
         ),
         "NTP System Precision": ArbiterServiceMap(
             "ntpSysPrecision",
             ArbiterServiceType.Number,
+            True,
             ArbiterMetricInfo(
                 None, ("fixed", (500, 1000)), render.time_offset, None, True
             ),
@@ -259,7 +269,8 @@ def discover_arbiter_gnss(
     section: dict[str, Union[str, int, float, datetime.datetime]],
 ) -> DiscoveryResult:
     for item in section:
-        yield Service(item=item)
+        if SERVICE_MAP.retrieve_n1(item).discovery:
+            yield Service(item=item)
 
 
 def check_arbiter_gnss(
@@ -297,6 +308,12 @@ def check_arbiter_gnss(
                 value=date_value.timestamp(),
                 render_func=render.datetime,
             )
+            ntpSysClockDateTime_name = SERVICE_MAP.n2_to_n1("ntpSysClockDateTime")
+            if service_map.id == "ntpSysClock" and ntpSysClockDateTime_name in section:
+                yield Result(
+                    state=State.OK,
+                    summary=f"Clock text: {section.get(ntpSysClockDateTime_name)}",
+                )
         case ArbiterServiceType.Leap:
             leap_value = section.get(item)
             assert isinstance(leap_value, int)

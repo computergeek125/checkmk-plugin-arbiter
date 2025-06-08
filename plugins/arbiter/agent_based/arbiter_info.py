@@ -40,6 +40,7 @@ ArbiterMetricInfo = NamedTuple(
 class ArbiterServiceType(IntEnum):
     String = 0
     Number = 1
+    Date = 2
 
 
 ArbiterServiceMap = NamedTuple(
@@ -83,7 +84,7 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
             "ntpSysString", ArbiterServiceType.String, None
         ),
         "NTP System Clock": ArbiterServiceMap(
-            "ntpSysClock", ArbiterServiceType.String, None
+            "ntpSysClock", ArbiterServiceType.Date, None
         ),
         "NTP System Clock - datetime": ArbiterServiceMap(
             "ntpSysClockDateTime", ArbiterServiceType.String, None
@@ -92,7 +93,7 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
             "ntpSysLeap", ArbiterServiceType.String, None
         ),
         "NTP Reference Time": ArbiterServiceMap(
-            "ntpSysRefTime", ArbiterServiceType.String, None
+            "ntpSysRefTime", ArbiterServiceType.Date, None
         ),
         "NTP System Offset": ArbiterServiceMap(
             "ntpSysOffset",
@@ -149,10 +150,10 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
             "ntpSysRootDelay",
             ArbiterServiceType.Number,
             ArbiterMetricInfo(
-                ("fixed", (-100, -50)),
+                None,
                 ("fixed", (50, 100)),
                 render.time_offset,
-                None,
+                0.000001,
                 False,
             ),
         ),
@@ -160,7 +161,7 @@ SERVICE_MAP: ArbiterServiceKNMap = ArbiterServiceKNMap(
             "ntpSysRootDispersion",
             ArbiterServiceType.Number,
             ArbiterMetricInfo(
-                None, ("fixed", (5000, 10000)), render.time_offset, None, False
+                None, ("fixed", (0.025, 0.05)), render.time_offset, 0.000001, False
             ),
         ),
         "NTP Stratum": ArbiterServiceMap(
@@ -285,6 +286,14 @@ def check_arbiter_gnss(
                 render_func=metric_info.render,
                 levels_lower=metric_info.levels_low,  # type: ignore
                 levels_upper=metric_info.levels_high,  # type: ignore
+            )
+        case ArbiterServiceType.Date:
+            date_value = section.get(item)
+            assert isinstance(date_value, datetime.datetime)
+            yield from check_levels(
+                label=item,
+                value=date_value.timestamp(),
+                render_func=render.datetime,
             )
         case _:
             raise ValueError(

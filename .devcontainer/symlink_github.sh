@@ -2,7 +2,7 @@
 function mk_cmk_link {
     if [ -e "$1" ];then
         echo "Linking '$1' to '$2'"
-        rmdir "$2"
+        rmdir "$2" ||:
         ln -s "$1" "$2"
     else
         echo "Source directory '$1' does not exist"

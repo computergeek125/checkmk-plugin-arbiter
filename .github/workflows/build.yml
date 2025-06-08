@@ -22,8 +22,8 @@ jobs:
       WORKSPACE: ${{ github.workspace }}
 
     steps:
-      - name: Initialize Checkmk Site
-        run: /docker-entrypoint.sh /bin/true
+      #- name: Initialize Checkmk Site
+      #  run: /docker-entrypoint.sh /bin/true
       - uses: actions/checkout@v4
       - name: Setup links
         run: .devcontainer/symlink_github.sh

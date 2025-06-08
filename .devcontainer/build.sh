@@ -15,4 +15,4 @@ if [ -n "$GITHUB_WORKSPACE" ]; then
     echo "pkgname=${NAME}" >> $GITHUB_OUTPUT
     VERSION=$(python -c 'print(eval(open("package").read())["version"])')
     echo "pkgversion=$VERSION" >> $GITHUB_OUTPUT
-firm 
+fi

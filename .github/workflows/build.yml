@@ -13,7 +13,7 @@ jobs:
     name: Build Checkmk package
     runs-on: ubuntu-latest
     container:
-      image: checkmk/check-mk-raw:2.0.0-latest
+      image: checkmk/check-mk-raw:2.4.0-latest
 
     env:
       OMD_ROOT: /omd/sites/cmk
@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Initialize Checkmk Site
         run: /docker-entrypoint.sh /bin/true
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup links
         run: .devcontainer/symlink.sh
       - name: Update GITHUB_PATH

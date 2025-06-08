@@ -1,3 +1,4 @@
+#!/bin/bash
 function mk_cmk_link {
     if [ -e "$1" ];then
         echo "Linking '$1' to '$2'"

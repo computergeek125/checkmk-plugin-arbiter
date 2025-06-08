@@ -3,6 +3,8 @@
 NAME=$(python -c 'print(eval(open("package").read())["name"])')
 rm /omd/sites/cmk/var/check_mk/packages/* ||:
 ln -s $WORKSPACE/package /omd/sites/cmk/var/check_mk/packages/$NAME
+echo $WORKSPACE :: $NAME
+ls $WORKSPACE /omd/sites/cmk/var/check_mk/packages/
 
 mkp -v package package
 
@@ -12,4 +14,4 @@ if [ -n "$GITHUB_WORKSPACE" ]; then
     echo "pkgname=${NAME}" >> $GITHUB_OUTPUT
     VERSION=$(python -c 'print(eval(open("package").read())["version"])')
     echo "pkgversion=$VERSION" >> $GITHUB_OUTPUT
-fi
+firm 

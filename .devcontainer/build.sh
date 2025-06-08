@@ -5,6 +5,7 @@ rm /omd/sites/cmk/var/check_mk/packages/* ||:
 ln -s $WORKSPACE/package /omd/sites/cmk/var/check_mk/packages/$NAME
 echo $WORKSPACE :: $NAME
 ls $WORKSPACE /omd/sites/cmk/var/check_mk/packages/
+mkp list
 
 mkp -v package package
 

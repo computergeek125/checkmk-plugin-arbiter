@@ -11,8 +11,9 @@ mkp -v package package
 
 # Set Outputs for GitHub Workflow steps
 if [ -n "$GITHUB_WORKSPACE" ]; then
-    echo "pkgfile=$(ls /omd/sites/cmk/local/share/check_mk/enabled_packages/*.mkp)" >> $GITHUB_OUTPUT
-    echo "pkgname=${NAME}" >> $GITHUB_OUTPUT
+    echo "pkg_path=$(ls /omd/sites/cmk/local/share/check_mk/enabled_packages/*.mkp)" >> $GITHUB_OUTPUT
+    echo "pkg_name=${NAME}" >> $GITHUB_OUTPUT
     VERSION=$(python -c 'print(eval(open("package").read())["version"])')
-    echo "pkgversion=$VERSION" >> $GITHUB_OUTPUT
+    echo "pkg_version=$VERSION" >> $GITHUB_OUTPUT
+    echo "pkg_file=${NAME}-${VERSION}.mkp" >> $GITHUB_OUTPUT
 fi

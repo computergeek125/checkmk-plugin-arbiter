@@ -253,7 +253,7 @@ def parse_arbiter_gnss(
     clock_item["ntpSysClkWander"] = int(string_table[7][0])
     clock_item["ntpSysRootDelay"] = int(string_table[8][0])
     clock_item["ntpSysRootDispersion"] = int(string_table[9][0])
-    clock_item["ntpSysLeap"] = int(string_table[10][0])
+    clock_item["ntpSysLeap"] = int(string_table[10][0], 2)
     clock_item["ntpSysStratum"] = int(string_table[11][0])
     clock_item["ntpSysPrecision"] = int(string_table[12][0])
     clock_item["ntpSysRefTime"] = parse_arbiter_ntp_hex_time(string_table[13][0])
